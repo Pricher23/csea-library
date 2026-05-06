@@ -1,4 +1,6 @@
-import { Routes, Route } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Routes, Route, useNavigate } from 'react-router-dom'
+import { supabase } from './lib/supabase'
 import CatalogPage from './pages/public/CatalogPage'
 import BookDetailPage from './pages/public/BookDetailPage'
 import AdminLoginPage from './pages/admin/AdminLoginPage'
@@ -14,7 +16,7 @@ function App() {
     <Routes>
       <Route path="/" element={<CatalogPage />} />
       <Route path="/book/:id" element={<BookDetailPage />} />
-      <Route path="/admin" element={<div>Admin panel — coming soon</div>} />
+      <Route path="/admin" element={<AdminRedirect />} />
       <Route path="/admin/login" element={<AdminLoginPage />} />
       <Route
         path="/admin/dashboard"
@@ -58,6 +60,22 @@ function App() {
       />
     </Routes>
   )
+}
+
+function AdminRedirect() {
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) {
+        navigate('/admin/dashboard', { replace: true })
+      } else {
+        navigate('/admin/login', { replace: true })
+      }
+    })
+  }, [navigate])
+
+  return null
 }
 
 export default App
