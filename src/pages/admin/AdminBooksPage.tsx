@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, Pencil, Trash2, X } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Search } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useCollections } from '../../hooks/useCollections'
 import type { Book } from '../../types'
@@ -89,6 +89,17 @@ function FieldLabel({ text, required }: { text: string; required?: boolean }) {
 export default function AdminBooksPage() {
   const [books, setBooks] = useState<Book[]>([])
   const [loadingBooks, setLoadingBooks] = useState(true)
+  const [totalCount, setTotalCount] = useState(0)
+  const [filteredCount, setFilteredCount] = useState(0)
+
+  // Search & filters
+  const [searchTerm, setSearchTerm] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [filterCollectionId, setFilterCollectionId] = useState('')
+  const [filterStatus, setFilterStatus] = useState<'all' | 'available' | 'borrowed'>('all')
+  const [filterGenre, setFilterGenre] = useState('')
+  const [genres, setGenres] = useState<string[]>([])
+
   const [modalOpen, setModalOpen] = useState(false)
   const [editingBook, setEditingBook] = useState<Book | null>(null)
   const [form, setForm] = useState<BookFormData>(EMPTY_FORM)
@@ -99,19 +110,81 @@ export default function AdminBooksPage() {
 
   const { collections } = useCollections()
 
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300)
+    return () => clearTimeout(timer)
+  }, [searchTerm])
+
+  // Fetch total (unfiltered) count once + after mutations
+  const fetchTotalCount = useCallback(async () => {
+    const { count } = await supabase
+      .from('books')
+      .select('*', { count: 'exact', head: true })
+    setTotalCount(count ?? 0)
+  }, [])
+
+  // Fetch distinct genres once on mount
+  useEffect(() => {
+    supabase
+      .from('books')
+      .select('genre')
+      .not('genre', 'is', null)
+      .then(({ data }) => {
+        const unique = [
+          ...new Set((data as { genre: string }[]).map((r) => r.genre)),
+        ].sort()
+        setGenres(unique)
+      })
+  }, [])
+
   const fetchBooks = useCallback(async () => {
     setLoadingBooks(true)
-    const { data } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let query: any = supabase
       .from('books')
-      .select('*, collection:collections(*)')
+      .select('*, collection:collections(*)', { count: 'exact' })
       .order('created_at', { ascending: false })
+
+    if (debouncedSearch) {
+      query = query.or(`title.ilike.%${debouncedSearch}%,author.ilike.%${debouncedSearch}%`)
+    }
+    if (filterCollectionId) {
+      query = query.eq('collection_id', filterCollectionId)
+    }
+    if (filterStatus === 'available') {
+      query = query.eq('is_available', true)
+    } else if (filterStatus === 'borrowed') {
+      query = query.eq('is_available', false)
+    }
+    if (filterGenre) {
+      query = query.eq('genre', filterGenre)
+    }
+
+    const { data, count } = await query
     setBooks((data as Book[]) ?? [])
+    setFilteredCount(count ?? 0)
     setLoadingBooks(false)
-  }, [])
+  }, [debouncedSearch, filterCollectionId, filterStatus, filterGenre])
+
+  useEffect(() => {
+    fetchTotalCount()
+  }, [fetchTotalCount])
 
   useEffect(() => {
     fetchBooks()
   }, [fetchBooks])
+
+  const hasFilters =
+    !!searchTerm || !!filterCollectionId || filterStatus !== 'all' || !!filterGenre
+
+  function resetFilters() {
+    setSearchTerm('')
+    setDebouncedSearch('')
+    setFilterCollectionId('')
+    setFilterStatus('all')
+    setFilterGenre('')
+  }
 
   function openAdd() {
     setEditingBook(null)
@@ -209,12 +282,14 @@ export default function AdminBooksPage() {
     }
     closeModal()
     fetchBooks()
+    fetchTotalCount()
   }
 
   async function handleDelete(book: Book) {
     if (!window.confirm('Ești sigur că vrei să ștergi această carte?')) return
     await supabase.from('books').delete().eq('id', book.id)
     fetchBooks()
+    fetchTotalCount()
   }
 
   return (
@@ -245,6 +320,90 @@ export default function AdminBooksPage() {
         </button>
       </div>
 
+      {/* Count line */}
+      <p style={{ fontSize: '14px', color: 'var(--color-text-muted)', margin: '0 0 12px' }}>
+        {hasFilters
+          ? <><strong style={{ color: 'var(--color-text)' }}>{filteredCount}</strong> din {totalCount} cărți</>
+          : <><strong style={{ color: 'var(--color-text)' }}>{totalCount}</strong> cărți în colecție</>
+        }
+      </p>
+
+      {/* Search + filter row */}
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', marginBottom: '16px' }}>
+        {/* Search input */}
+        <div style={{ position: 'relative', flex: '1 1 220px', minWidth: '180px' }}>
+          <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', pointerEvents: 'none' }}>
+            <Search size={15} />
+          </span>
+          <input
+            type="text"
+            value={searchTerm}
+            placeholder="Caută după titlu sau autor..."
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{
+              width: '100%',
+              height: '36px',
+              paddingLeft: '32px',
+              paddingRight: '10px',
+              border: '1px solid var(--color-border)',
+              borderRadius: '6px',
+              backgroundColor: 'white',
+              fontSize: '14px',
+              color: 'var(--color-text)',
+              outline: 'none',
+              boxSizing: 'border-box',
+            }}
+            onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--color-primary)' }}
+            onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--color-border)' }}
+          />
+        </div>
+
+        {/* Collection filter */}
+        <select
+          value={filterCollectionId}
+          onChange={(e) => setFilterCollectionId(e.target.value)}
+          style={{ height: '36px', border: '1px solid var(--color-border)', borderRadius: '6px', backgroundColor: 'white', fontSize: '14px', color: 'var(--color-text)', padding: '0 8px', cursor: 'pointer' }}
+        >
+          <option value="">Toate colecțiile</option>
+          {collections.map((c) => (
+            <option key={c.id} value={c.id}>{c.name_ro}</option>
+          ))}
+        </select>
+
+        {/* Status filter */}
+        <select
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value as 'all' | 'available' | 'borrowed')}
+          style={{ height: '36px', border: '1px solid var(--color-border)', borderRadius: '6px', backgroundColor: 'white', fontSize: '14px', color: 'var(--color-text)', padding: '0 8px', cursor: 'pointer' }}
+        >
+          <option value="all">Toate</option>
+          <option value="available">Disponibil</option>
+          <option value="borrowed">Împrumutat</option>
+        </select>
+
+        {/* Genre filter */}
+        <select
+          value={filterGenre}
+          onChange={(e) => setFilterGenre(e.target.value)}
+          style={{ height: '36px', border: '1px solid var(--color-border)', borderRadius: '6px', backgroundColor: 'white', fontSize: '14px', color: 'var(--color-text)', padding: '0 8px', cursor: 'pointer' }}
+        >
+          <option value="">Toate genurile</option>
+          {genres.map((g) => (
+            <option key={g} value={g}>{g}</option>
+          ))}
+        </select>
+
+        {/* Reset button — only when filters active */}
+        {hasFilters && (
+          <button
+            onClick={resetFilters}
+            style={{ background: 'none', border: 'none', fontSize: '14px', color: 'var(--color-primary)', cursor: 'pointer', padding: '0 4px', whiteSpace: 'nowrap' }}
+          >
+            Resetează filtrele
+          </button>
+        )}
+      </div>
+
       {/* Table */}
       {loadingBooks ? (
         <p style={{ textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '14px', marginTop: '48px' }}>
@@ -256,7 +415,7 @@ export default function AdminBooksPage() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ backgroundColor: '#EDEAE5' }}>
-                  {['Titlu', 'Autor', 'Colecție', 'Limbă', 'Locație', 'Status', 'Acțiuni'].map((h) => (
+                  {['#', 'Titlu', 'Autor', 'Colecție', 'Limbă', 'Locație', 'Status', 'Acțiuni'].map((h) => (
                     <th
                       key={h}
                       style={{
@@ -277,13 +436,16 @@ export default function AdminBooksPage() {
                 </tr>
               </thead>
               <tbody>
-                {books.map((book) => (
+                {books.map((book, idx) => (
                   <tr
                     key={book.id}
                     style={{ backgroundColor: 'white', borderBottom: '1px solid var(--color-border)' }}
                     onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F9F8F5' }}
                     onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'white' }}
                   >
+                    <td style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
+                      {idx + 1}
+                    </td>
                     <td
                       style={{
                         padding: '12px 16px',
@@ -338,7 +500,7 @@ export default function AdminBooksPage() {
                 {books.length === 0 && (
                   <tr>
                     <td
-                      colSpan={7}
+                      colSpan={8}
                       style={{ padding: '48px 16px', textAlign: 'center', fontSize: '14px', color: 'var(--color-text-muted)' }}
                     >
                       Nu există cărți înregistrate.
