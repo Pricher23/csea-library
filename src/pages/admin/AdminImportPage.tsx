@@ -77,6 +77,7 @@ function formatBytes(bytes: number): string {
 export default function AdminImportPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [allParsedRows, setAllParsedRows] = useState<ParsedRow[]>([])
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([])
   const [dragOver, setDragOver] = useState(false)
   const [importing, setImporting] = useState(false)
@@ -91,12 +92,13 @@ export default function AdminImportPage() {
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
-        const rows: ParsedRow[] = results.data.slice(0, 50).map((raw, index) => ({
+        const all: ParsedRow[] = results.data.map((raw, index) => ({
           raw,
           index: index + 1,
-          isValid: !!raw.title?.trim() && !!raw.author?.trim(),
+          isValid: !!raw.title?.trim(),
         }))
-        setParsedRows(rows)
+        setAllParsedRows(all)
+        setParsedRows(all.slice(0, 50))
       },
     })
   }, [])
@@ -115,14 +117,15 @@ export default function AdminImportPage() {
 
   function clearFile() {
     setSelectedFile(null)
+    setAllParsedRows([])
     setParsedRows([])
     setImportResult(null)
     setImportError(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
-  const validRows = parsedRows.filter((r) => r.isValid)
-  const invalidRows = parsedRows.filter((r) => !r.isValid)
+  const validRows = allParsedRows.filter((r) => r.isValid)
+  const invalidRows = allParsedRows.filter((r) => !r.isValid)
 
   async function handleImport() {
     if (validRows.length === 0) return
