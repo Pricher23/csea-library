@@ -42,7 +42,7 @@ export default function AdminLayout({ children }: React.PropsWithChildren) {
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <img
-              src="/logo.png"
+              src="/yukishor.jpeg"
               alt="CSEA Logo"
               width={24}
               height={24}

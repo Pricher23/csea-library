@@ -80,7 +80,7 @@ export default function BookDetailPage() {
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <img
-            src="/logo.png"
+            src="/yukishor.jpeg"
             alt="CSEA Logo"
             width={32}
             height={32}

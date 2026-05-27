@@ -85,7 +85,7 @@ export default function CatalogPage() {
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <img
-            src="/logo.png"
+            src="/yukishor.jpeg"
             alt="CSEA Logo"
             width={32}
             height={32}
@@ -231,8 +231,8 @@ export default function CatalogPage() {
               book={book}
               collectionName={
                 book.collection_id
-                  ? (collectionsMap.get(book.collection_id)?.[nameField] ?? '—')
-                  : '—'
+                  ? (collectionsMap.get(book.collection_id)?.[nameField] ?? '-')
+                  : '-'
               }
               availableLabel={t('book.available')}
               borrowedLabel={t('book.borrowed')}
@@ -333,7 +333,7 @@ function BookCard({
       </div>
 
       <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--color-text-muted)' }}>
-        {book.genre ?? '—'} · {book.language}
+        {book.genre ?? '-'} · {book.language}
       </div>
 
       <div
