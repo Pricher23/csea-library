@@ -78,9 +78,19 @@ export default function BookDetailPage() {
           paddingRight: '24px',
         }}
       >
-        <span style={{ fontSize: '16px', fontWeight: 600, color: 'var(--color-text)' }}>
-          {t('app.title')}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <img
+            src="/logo.png"
+            alt="CSEA Logo"
+            width={32}
+            height={32}
+            style={{ borderRadius: '4px', objectFit: 'contain' }}
+            onError={(e) => { e.currentTarget.style.display = 'none' }}
+          />
+          <span style={{ fontSize: '16px', fontWeight: 600, color: 'var(--color-text)' }}>
+            {t('app.title')}
+          </span>
+        </div>
         <div style={{ display: 'flex', gap: '4px' }}>
           {LANGS.map(({ code, label }) => {
             const active = currentLang === code

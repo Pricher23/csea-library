@@ -92,7 +92,7 @@ export default function AdminBooksPage() {
   const [totalCount, setTotalCount] = useState(0)
   const [filteredCount, setFilteredCount] = useState(0)
 
-  // Search & filters
+  // search and filters
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [filterCollectionId, setFilterCollectionId] = useState('')
@@ -110,13 +110,13 @@ export default function AdminBooksPage() {
 
   const { collections } = useCollections()
 
-  // Debounce search input
+  // search input
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300)
     return () => clearTimeout(timer)
   }, [searchTerm])
 
-  // Fetch total (unfiltered) count once + after mutations
+  // total count once + after changes
   const fetchTotalCount = useCallback(async () => {
     const { count } = await supabase
       .from('books')
@@ -124,7 +124,7 @@ export default function AdminBooksPage() {
     setTotalCount(count ?? 0)
   }, [])
 
-  // Fetch distinct genres once on mount
+  // distinct genres
   useEffect(() => {
     supabase
       .from('books')
@@ -140,7 +140,6 @@ export default function AdminBooksPage() {
 
   const fetchBooks = useCallback(async () => {
     setLoadingBooks(true)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let query: any = supabase
       .from('books')
       .select('*, collection:collections(*)', { count: 'exact' })

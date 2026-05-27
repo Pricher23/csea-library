@@ -144,7 +144,6 @@ export default function AdminLoansPage() {
     fetchLoans()
   }, [fetchLoans])
 
-  // Book search for the record modal
   useEffect(() => {
     if (!form.bookSearchTerm.trim() || form.selectedBook) {
       setSearchResults([])

@@ -40,8 +40,18 @@ export default function AdminLayout({ children }: React.PropsWithChildren) {
             borderBottom: '1px solid var(--color-border)',
           }}
         >
-          <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text)' }}>
-            Biblioteca CSEA
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <img
+              src="/logo.png"
+              alt="CSEA Logo"
+              width={24}
+              height={24}
+              style={{ borderRadius: '4px', objectFit: 'contain' }}
+              onError={(e) => { e.currentTarget.style.display = 'none' }}
+            />
+            <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text)' }}>
+              Biblioteca CSEA
+            </div>
           </div>
           <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
             Admin

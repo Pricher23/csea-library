@@ -43,12 +43,10 @@ export function useBooks(options: UseBooksOptions): UseBooksResult {
       const to = from + pageSize - 1
 
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let dataQuery: any = debouncedSearch
           ? supabase.rpc('search_books', { search_term: debouncedSearch })
           : supabase.from('books').select('*')
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let countQuery: any = debouncedSearch
           ? supabase.rpc('search_books', { search_term: debouncedSearch }, { count: 'exact', head: true })
           : supabase.from('books').select('*', { count: 'exact', head: true })
